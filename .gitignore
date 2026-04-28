@@ -1,0 +1,34 @@
+# dependencies
+node_modules/
+
+# build outputs
+client/.next/
+client/out/
+client/tsconfig.tsbuildinfo
+server/dist/
+
+# env files
+.env
+.env.*
+!.env.example
+
+# database (local SQLite)
+server/prisma/*.db
+server/prisma/*.db-journal
+server/prisma/*.db.bak.*
+
+# uploaded media (local dev only)
+server/uploads/
+
+# logs
+*.log
+npm-debug.log*
+
+# editor / OS
+.DS_Store
+.idea/
+.vscode/
+
+# deploy artifacts
+.vercel/
+.turbo/

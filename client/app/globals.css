@@ -1,0 +1,57 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    background: #fafaf7;
+    color: #111111;
+    -webkit-font-smoothing: antialiased;
+  }
+  body {
+    font-family: 'Inter', 'Noto Sans KR', system-ui, sans-serif;
+    font-feature-settings: 'ss01', 'cv11';
+  }
+  ::selection {
+    background: #111111;
+    color: #fafaf7;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .display {
+    font-family: 'Cormorant Garamond', 'Noto Serif KR', serif;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+  }
+  .rule {
+    height: 1px;
+    background: #111111;
+    width: 100%;
+  }
+  .hairline {
+    border-color: #e5e5e0;
+  }
+  .nav-link {
+    @apply text-[11px] uppercase tracking-[0.2em] text-ink/80 hover:text-ink transition-colors;
+  }
+  .input {
+    @apply w-full border-b border-line bg-transparent py-3 text-sm text-ink placeholder:text-muted/60 focus:border-ink focus:outline-none;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center border border-ink px-6 py-3 text-[11px] uppercase tracking-[0.25em] text-ink hover:bg-ink hover:text-paper transition-colors disabled:opacity-40 disabled:cursor-not-allowed;
+  }
+  .btn-ghost {
+    @apply inline-flex items-center justify-center px-3 py-2 text-[11px] uppercase tracking-[0.25em] text-muted hover:text-ink transition-colors;
+  }
+}
