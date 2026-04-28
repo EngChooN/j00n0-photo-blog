@@ -59,7 +59,7 @@ export function LightboxPresenter({
         </button>
       </header>
 
-      <div className="relative z-10 flex flex-1 items-center justify-center px-6 py-8 md:px-12">
+      <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-6 py-8 md:px-12">
         <Carousel
           photos={post.photos}
           index={photoIndex}
@@ -67,14 +67,14 @@ export function LightboxPresenter({
         />
       </div>
 
-      <footer className="relative z-10 border-t border-white/10 px-6 py-6 md:px-12">
+      <footer className="relative z-10 max-h-[150px] flex-shrink-0 overflow-y-auto overscroll-contain border-t border-white/10 px-6 py-6 md:max-h-[200px] md:px-12">
         <div className="mx-auto flex max-w-[1100px] flex-col gap-2 md:flex-row md:items-baseline md:justify-between">
           <div className="space-y-1">
             <h2 className="display text-xl leading-tight text-white md:text-3xl">
               {post.title}
             </h2>
             {post.caption && (
-              <p className="max-w-prose text-sm leading-relaxed text-white/70">
+              <p className="max-w-prose whitespace-pre-wrap text-sm leading-relaxed text-white/70">
                 {post.caption}
               </p>
             )}

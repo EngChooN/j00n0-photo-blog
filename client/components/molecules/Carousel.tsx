@@ -130,17 +130,22 @@ export function Carousel({
     lockAspect && photos[0]
       ? { aspectRatio: `${photos[0].width} / ${photos[0].height}` }
       : undefined;
+  // Dark variant fills its parent height; light locks aspect ratio.
+  const wrapperClass = lockAspect
+    ? 'group relative w-full'
+    : 'group relative h-full w-full';
+  const viewportClass = lockAspect ? 'overflow-hidden' : 'h-full overflow-hidden';
   const imageClass = lockAspect
     ? 'h-full w-full object-contain'
-    : 'max-h-[calc(100vh-14rem)] max-w-full object-contain';
+    : 'max-h-full max-w-full object-contain';
   // flex-[0_0_calc(100%+1px)] avoids sub-pixel bleed of neighbor slides at snap points.
   const slideClass =
     'relative flex min-w-0 flex-[0_0_calc(100%+1px)] items-center justify-center';
 
   return (
-    <div className="group relative w-full">
-      <div className="overflow-hidden" ref={emblaRef} style={aspectStyle}>
-        <div className={lockAspect ? 'flex h-full' : 'flex'}>
+    <div className={wrapperClass}>
+      <div className={viewportClass} ref={emblaRef} style={aspectStyle}>
+        <div className="flex h-full">
           {photos.map((photo, i) => {
             const eager =
               i === selectedIndex ||
