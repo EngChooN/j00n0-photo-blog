@@ -3,10 +3,8 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '@/prisma/prisma.service';
-import { join } from 'node:path';
-import { mkdir, unlink, writeFile } from 'node:fs/promises';
+import { StorageService } from '@/storage/storage.service';
 import sharp from 'sharp';
 import { randomUUID } from 'node:crypto';
 import { CreatePostDto, UpdatePostDto } from './dto/post.dto';
@@ -18,22 +16,14 @@ type ProcessedFile = {
   src: string;
   width: number;
   height: number;
-  absolutePath: string;
 };
 
 @Injectable()
 export class PostsService {
-  private readonly uploadDir: string;
-
   constructor(
     private readonly prisma: PrismaService,
-    private readonly config: ConfigService,
-  ) {
-    this.uploadDir = join(
-      process.cwd(),
-      this.config.get<string>('UPLOAD_DIR', 'uploads'),
-    );
-  }
+    private readonly storage: StorageService,
+  ) {}
 
   list() {
     return this.prisma.post.findMany({
@@ -52,10 +42,10 @@ export class PostsService {
       );
     }
 
-    const processed = await this.writeFiles(files);
+    const processed = await this.uploadFiles(files);
 
     try {
-      const post = await this.prisma.post.create({
+      return await this.prisma.post.create({
         data: {
           title: dto.title,
           caption: dto.caption ?? '',
@@ -72,9 +62,8 @@ export class PostsService {
         },
         include: { photos: { orderBy: { position: 'asc' } } },
       });
-      return post;
     } catch (error) {
-      await this.unlinkAll(processed.map((p) => p.absolutePath));
+      await this.storage.remove(processed.map((p) => p.src));
       throw error;
     }
   }
@@ -116,7 +105,7 @@ export class PostsService {
     );
 
     const processed = addedFiles.length
-      ? await this.writeFiles(addedFiles)
+      ? await this.uploadFiles(addedFiles)
       : [];
 
     let updated;
@@ -152,12 +141,12 @@ export class PostsService {
         });
       });
     } catch (error) {
-      await this.unlinkAll(processed.map((p) => p.absolutePath));
+      await this.storage.remove(processed.map((p) => p.src));
       throw error;
     }
 
-    // DB is the source of truth; clean up disk after commit succeeds.
-    await this.unlinkAll(removedPhotos.map((p) => this.srcToPath(p.src)));
+    // DB is the source of truth; clean up storage after commit succeeds.
+    await this.storage.remove(removedPhotos.map((p) => p.src));
     return updated;
   }
 
@@ -169,11 +158,11 @@ export class PostsService {
     if (!post) throw new NotFoundException('Post not found');
 
     await this.prisma.post.delete({ where: { id } });
-    await this.unlinkAll(post.photos.map((p) => this.srcToPath(p.src)));
+    await this.storage.remove(post.photos.map((p) => p.src));
     return { ok: true };
   }
 
-  private async writeFiles(
+  private async uploadFiles(
     files: Express.Multer.File[],
   ): Promise<ProcessedFile[]> {
     for (const f of files) {
@@ -181,7 +170,6 @@ export class PostsService {
         throw new BadRequestException('Only image files are allowed');
       }
     }
-    await mkdir(this.uploadDir, { recursive: true });
 
     const results = await Promise.allSettled(
       files.map((f) => this.processOne(f)),
@@ -196,7 +184,7 @@ export class PostsService {
       (r): r is PromiseRejectedResult => r.status === 'rejected',
     );
     if (firstFailure) {
-      await this.unlinkAll(successes.map((p) => p.absolutePath));
+      await this.storage.remove(successes.map((p) => p.src));
       const reason = firstFailure.reason;
       if (reason instanceof BadRequestException) throw reason;
       throw new BadRequestException(
@@ -221,21 +209,11 @@ export class PostsService {
       .toBuffer({ resolveWithObject: true });
 
     const filename = `${Date.now()}-${randomUUID()}.webp`;
-    const absolutePath = join(this.uploadDir, filename);
-    await writeFile(absolutePath, output.data);
+    const src = await this.storage.upload(filename, output.data);
     return {
-      src: `/uploads/${filename}`,
+      src,
       width: output.info.width,
       height: output.info.height,
-      absolutePath,
     };
-  }
-
-  private srcToPath(src: string): string {
-    return join(this.uploadDir, src.replace(/^\/uploads\//, ''));
-  }
-
-  private async unlinkAll(paths: string[]) {
-    await Promise.allSettled(paths.map((p) => unlink(p)));
   }
 }

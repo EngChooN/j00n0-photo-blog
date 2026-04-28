@@ -30,10 +30,7 @@ export class AuthController {
   ) {
     const { token, payload } = this.auth.signIn(dto.username, dto.password);
     res.cookie(ACCESS_TOKEN_COOKIE, token, {
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: false,
-      path: '/',
+      ...this.cookieOptions(),
       maxAge: 1000 * 60 * 60 * 24 * 30,
     });
     return { username: payload.sub, role: payload.role };
@@ -42,8 +39,19 @@ export class AuthController {
   @Post('logout')
   @HttpCode(200)
   logout(@Res({ passthrough: true }) res: Response) {
-    res.clearCookie(ACCESS_TOKEN_COOKIE, { path: '/' });
+    res.clearCookie(ACCESS_TOKEN_COOKIE, this.cookieOptions());
     return { ok: true };
+  }
+
+  private cookieOptions() {
+    const isProd = this.config.get<string>('NODE_ENV') === 'production';
+    return {
+      httpOnly: true,
+      // SameSite=None+Secure required when frontend and backend are on different origins (Vercel ↔ Render).
+      sameSite: isProd ? ('none' as const) : ('lax' as const),
+      secure: isProd,
+      path: '/',
+    };
   }
 
   @UseGuards(JwtAuthGuard)
