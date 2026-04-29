@@ -4,6 +4,10 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Carousel } from '@/components/molecules/Carousel';
+import { LikeButton } from '@/components/atoms/LikeButton';
+import { CommentsButton } from '@/components/atoms/CommentsButton';
+import { ShareButton } from '@/components/atoms/ShareButton';
+import { CommentsModal } from '@/components/organisms/CommentsSection';
 import { useFadeIn } from '@/hooks/useFadeIn';
 import type { Post } from '@/lib/types';
 
@@ -30,6 +34,7 @@ export function PostDetailCarousel({ post }: Props) {
   const [shareLabel, setShareLabel] = useState<'Share' | 'Copied!' | 'Failed'>(
     'Share',
   );
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const visible = useFadeIn();
   const total = post.photos.length;
 
@@ -71,61 +76,66 @@ export function PostDetailCarousel({ post }: Props) {
 
   return (
     <div
-      className={`fixed inset-0 z-50 flex flex-col overscroll-none bg-black text-white/90 transition-opacity duration-300 ease-editorial ${
+      className={`fixed inset-0 z-50 overscroll-none bg-black text-white/90 transition-opacity duration-300 ease-editorial ${
         visible ? 'opacity-100' : 'opacity-0'
       }`}
     >
-      <header className="relative z-10 flex items-center gap-4 border-b border-white/10 px-6 py-5 md:gap-6 md:px-12">
-        <span className="min-w-0 flex-1 truncate text-[10px] uppercase tracking-[0.3em] text-white/40">
-          {total > 1
-            ? `${String(index + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`
-            : post.title}
-        </span>
-        <div className="flex flex-shrink-0 items-center gap-4 md:gap-6">
-          <button
-            type="button"
-            onClick={handleShare}
-            className="inline-flex w-[70px] justify-center text-[11px] uppercase tracking-[0.25em] text-white/50 transition-colors hover:text-white"
-            aria-label="Share this post"
-          >
-            {shareLabel}
-          </button>
+      <section className="flex h-screen flex-col">
+        <header className="relative z-10 flex flex-shrink-0 items-center gap-4 border-b border-white/10 px-6 py-5 md:gap-6 md:px-12">
+          <span className="min-w-0 flex-1 truncate text-[10px] uppercase tracking-[0.3em] text-white/40">
+            {total > 1
+              ? `${String(index + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`
+              : post.title}
+          </span>
           <Link
             href="/"
-            className="text-[11px] uppercase tracking-[0.25em] text-white/50 transition-colors hover:text-white"
+            className="flex-shrink-0 text-[11px] uppercase tracking-[0.25em] text-white/50 transition-colors hover:text-white"
             aria-label="Back to journal"
           >
             ← Back
           </Link>
+        </header>
+
+        <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-6 py-8 md:px-12">
+          <Carousel
+            photos={post.photos}
+            index={index}
+            onIndexChange={setIndex}
+          />
         </div>
-      </header>
 
-      <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-6 py-8 md:px-12">
-        <Carousel
-          photos={post.photos}
-          index={index}
-          onIndexChange={setIndex}
-        />
-      </div>
-
-      <footer className="relative z-10 max-h-[150px] flex-shrink-0 overflow-y-auto overscroll-contain border-t border-white/10 px-6 py-6 md:max-h-[200px] md:px-12">
-        <div className="mx-auto flex max-w-[1100px] flex-col gap-2 md:flex-row md:items-baseline md:justify-between">
-          <div className="space-y-1">
+        <footer className="relative z-10 max-h-[200px] flex-shrink-0 overflow-y-auto overscroll-contain border-t border-white/10 px-6 py-6 md:max-h-[240px] md:px-12">
+          <div className="mx-auto max-w-[1100px] space-y-2">
             <h2 className="display text-xl leading-tight text-white md:text-3xl">
               {post.title}
             </h2>
+            <div className="flex flex-wrap items-center gap-3 text-[10px] uppercase tracking-[0.3em] text-white/40">
+              {post.location && <span>{post.location}</span>}
+              {post.location && <span aria-hidden>·</span>}
+              <span>{formatDate(post.takenAt || post.createdAt)}</span>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 text-[10px] uppercase tracking-[0.3em] text-white/40">
+              <LikeButton postId={post.id} initialLikeCount={post.likeCount} />
+              <CommentsButton
+                postId={post.id}
+                onClick={() => setCommentsOpen(true)}
+              />
+              <ShareButton label={shareLabel} onClick={handleShare} />
+            </div>
             {post.caption && (
-              <p className="max-w-prose whitespace-pre-wrap text-sm leading-relaxed text-white/70">
+              <p className="max-w-prose whitespace-pre-wrap pt-1 text-sm leading-relaxed text-white/70">
                 {post.caption}
               </p>
             )}
           </div>
-          <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-[10px] uppercase tracking-[0.3em] text-white/40">
-            {post.location && <span>{post.location}</span>}
-            <span>{formatDate(post.takenAt || post.createdAt)}</span>
-          </div>
-        </div>
-      </footer>
+        </footer>
+      </section>
+
+      <CommentsModal
+        postId={post.id}
+        open={commentsOpen}
+        onClose={() => setCommentsOpen(false)}
+      />
     </div>
   );
 }

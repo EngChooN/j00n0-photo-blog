@@ -91,7 +91,7 @@ export function PhotoCard({ post, index, displayNumber, isAdmin, onDelete }: Pro
             </span>
           )}
         </div>
-        <figcaption className="flex flex-col gap-2 px-1 md:flex-row md:items-baseline md:justify-between">
+        <figcaption className="flex flex-col gap-2 px-1">
           <div className="space-y-2">
             <div className="flex items-baseline gap-3">
               <span className="text-[10px] uppercase tracking-[0.3em] text-muted">
@@ -120,26 +120,33 @@ export function PhotoCard({ post, index, displayNumber, isAdmin, onDelete }: Pro
               </p>
             )}
           </div>
-          <div className="relative z-10 flex items-center gap-2 md:gap-4">
+          <div className="relative z-10 flex items-center justify-between gap-3">
             <span className="text-[10px] uppercase tracking-[0.3em] text-muted">
               {formatDate(post.takenAt || post.createdAt)}
             </span>
             {isAdmin && (
-              <Link
-                href={`/admin/edit/${post.id}`}
-                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-[10px] uppercase tracking-[0.3em] text-muted underline-offset-4 hover:text-ink hover:underline md:min-h-0 md:min-w-0"
-              >
-                Edit
-              </Link>
-            )}
-            {isAdmin && onDelete && (
-              <button
-                type="button"
-                onClick={() => onDelete(post.id)}
-                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-[10px] uppercase tracking-[0.3em] text-muted underline-offset-4 hover:text-ink hover:underline md:min-h-0 md:min-w-0"
-              >
-                Delete
-              </button>
+              <div className="flex items-center gap-3">
+                <Link
+                  href={`/admin/edit/${post.id}`}
+                  className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-[10px] uppercase tracking-[0.3em] text-muted underline-offset-4 hover:text-ink hover:underline md:min-h-0 md:min-w-0"
+                >
+                  Edit
+                </Link>
+                {onDelete && (
+                  <>
+                    <span aria-hidden className="text-[10px] text-muted/50">
+                      ·
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onDelete(post.id)}
+                      className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-[10px] uppercase tracking-[0.3em] text-muted underline-offset-4 hover:text-ink hover:underline md:min-h-0 md:min-w-0"
+                    >
+                      Delete
+                    </button>
+                  </>
+                )}
+              </div>
             )}
           </div>
         </figcaption>

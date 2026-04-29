@@ -22,3 +22,10 @@ export const guestbookSchema = z.object({
 });
 
 export type GuestbookInput = z.infer<typeof guestbookSchema>;
+
+export const commentSchema = z.object({
+  name: z.string().min(1, '이름을 입력해주세요').max(40),
+  body: z.string().min(1, '댓글을 입력해주세요').max(800),
+});
+
+export type CommentInput = z.infer<typeof commentSchema>;
