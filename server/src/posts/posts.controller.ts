@@ -26,6 +26,11 @@ export class PostsController {
     return this.posts.list();
   }
 
+  @Get(':id')
+  getOne(@Param('id') id: string) {
+    return this.posts.getOne(id);
+  }
+
   @UseGuards(JwtAuthGuard)
   @Post()
   @UseInterceptors(FilesInterceptor('files', MAX_FILES))

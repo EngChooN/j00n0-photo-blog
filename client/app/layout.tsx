@@ -3,11 +3,51 @@ import './globals.css';
 import { Providers } from './providers';
 import { Header } from '@/components/organisms/Header';
 import { Footer } from '@/components/organisms/Footer';
-import { Lightbox } from '@/components/organisms/Lightbox';
+
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? 'https://j00n0-photo-blog.vercel.app';
+const SITE_NAME = 'j00n0__';
+const SITE_TITLE = 'j00n0__ — Photo Journal';
+const SITE_DESCRIPTION =
+  '도시, 빛, 그리고 잠시 멈춘 순간들. j00n0__의 사진 일지.';
 
 export const metadata: Metadata = {
-  title: 'j00n0__ — Photo Journal',
-  description: 'A minimal photo magazine.',
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: SITE_TITLE,
+    template: `%s — ${SITE_NAME}`,
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  authors: [{ name: SITE_NAME }],
+  creator: SITE_NAME,
+  openGraph: {
+    type: 'website',
+    locale: 'ko_KR',
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      'max-image-preview': 'large',
+    },
+  },
+  alternates: {
+    types: {
+      'application/rss+xml': [{ url: '/rss.xml', title: SITE_TITLE }],
+    },
+  },
 };
 
 export default function RootLayout({
@@ -30,7 +70,6 @@ export default function RootLayout({
           <Header />
           <main>{children}</main>
           <Footer />
-          <Lightbox />
         </Providers>
       </body>
     </html>

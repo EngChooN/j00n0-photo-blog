@@ -32,6 +32,15 @@ export class PostsService {
     });
   }
 
+  async getOne(id: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { id },
+      include: { photos: { orderBy: { position: 'asc' } } },
+    });
+    if (!post) throw new NotFoundException('Post not found');
+    return post;
+  }
+
   async create(files: Express.Multer.File[], dto: CreatePostDto) {
     if (!files || files.length === 0) {
       throw new BadRequestException('At least one photo is required');

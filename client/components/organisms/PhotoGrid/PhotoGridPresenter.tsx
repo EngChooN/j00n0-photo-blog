@@ -9,7 +9,6 @@ type Props = {
   isLoading: boolean;
   isAdmin: boolean;
   onDelete: (id: string) => void;
-  onOpen: (postIndex: number, photoIndex?: number) => void;
 };
 
 export function PhotoGridPresenter({
@@ -17,7 +16,6 @@ export function PhotoGridPresenter({
   isLoading,
   isAdmin,
   onDelete,
-  onOpen,
 }: Props) {
   if (isLoading) {
     return (
@@ -34,6 +32,7 @@ export function PhotoGridPresenter({
       />
     );
   }
+  const total = posts.length;
   return (
     <div className="grid grid-cols-12 gap-x-6 gap-y-12 md:gap-y-24">
       {posts.map((post, index) => (
@@ -41,9 +40,9 @@ export function PhotoGridPresenter({
           key={post.id}
           post={post}
           index={index}
+          displayNumber={total - index}
           isAdmin={isAdmin}
           onDelete={onDelete}
-          onOpen={onOpen}
         />
       ))}
     </div>

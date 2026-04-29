@@ -4,15 +4,14 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import type { Post } from '@/lib/types';
 import { assetUrl } from '@/lib/api';
-import { Carousel } from '@/components/molecules/Carousel';
 import { useReveal } from '@/hooks/useReveal';
 
 type Props = {
   post: Post;
   index: number;
+  displayNumber: number;
   isAdmin?: boolean;
   onDelete?: (id: string) => void;
-  onOpen?: (postIndex: number, photoIndex?: number) => void;
 };
 
 const layouts: { className: string; span: number }[] = [
@@ -37,18 +36,10 @@ function formatDate(value: string) {
     .toUpperCase();
 }
 
-export function PhotoCard({
-  post,
-  index,
-  isAdmin,
-  onDelete,
-  onOpen,
-}: Props) {
+export function PhotoCard({ post, index, displayNumber, isAdmin, onDelete }: Props) {
   const layout = layouts[index % layouts.length];
   const cover = post.photos[0];
   const photoCount = post.photos.length;
-  const showCarousel = photoCount > 1 && layout.span >= 6;
-  const [carouselIndex, setCarouselIndex] = useState(0);
   const [coverLoaded, setCoverLoaded] = useState(false);
   const coverImgRef = useRef<HTMLImageElement | null>(null);
   const [revealRef, revealed] = useReveal<HTMLElement>();
@@ -62,88 +53,20 @@ export function PhotoCard({
 
   if (!cover) return null;
 
+  const href = `/posts/${post.id}`;
+
   const articleClass = [
     'group',
+    'relative',
     layout.className,
     'transition-[opacity,transform] duration-700 ease-editorial',
     revealed ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-2',
   ].join(' ');
 
-  const figcaption = (
-    <figcaption className="flex flex-col gap-2 px-1 md:flex-row md:items-baseline md:justify-between">
-      <div className="space-y-2">
-        <div className="flex items-baseline gap-3">
-          <span className="text-[10px] uppercase tracking-[0.3em] text-muted">
-            No. {String(index + 1).padStart(2, '0')}
-          </span>
-          {post.location && (
-            <span className="text-[10px] uppercase tracking-[0.3em] text-muted">
-              · {post.location}
-            </span>
-          )}
-        </div>
-        <h2 className="display text-xl leading-tight md:text-3xl">
-          {post.title}
-        </h2>
-        {post.caption && (
-          <p className="max-w-prose text-sm leading-relaxed text-ink/70">
-            {post.caption}
-          </p>
-        )}
-      </div>
-      <div className="flex items-center gap-2 md:gap-4">
-        <span className="text-[10px] uppercase tracking-[0.3em] text-muted">
-          {formatDate(post.takenAt || post.createdAt)}
-        </span>
-        {isAdmin && (
-          <Link
-            href={`/admin/edit/${post.id}`}
-            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-[10px] uppercase tracking-[0.3em] text-muted underline-offset-4 hover:text-ink hover:underline md:min-h-0 md:min-w-0"
-          >
-            Edit
-          </Link>
-        )}
-        {isAdmin && onDelete && (
-          <button
-            type="button"
-            onClick={() => onDelete(post.id)}
-            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-[10px] uppercase tracking-[0.3em] text-muted underline-offset-4 hover:text-ink hover:underline md:min-h-0 md:min-w-0"
-          >
-            Delete
-          </button>
-        )}
-      </div>
-    </figcaption>
-  );
-
-  if (showCarousel) {
-    return (
-      <article ref={revealRef} className={articleClass}>
-        <figure className="space-y-5">
-          <div className="bg-line/40">
-            <Carousel
-              photos={post.photos}
-              index={carouselIndex}
-              onIndexChange={setCarouselIndex}
-              variant="light"
-              onSlideClick={(photoIdx) => onOpen?.(index, photoIdx)}
-            />
-          </div>
-          {figcaption}
-        </figure>
-      </article>
-    );
-  }
-
   return (
     <article ref={revealRef} className={articleClass}>
       <figure className="space-y-5">
-        <button
-          type="button"
-          onClick={() => onOpen?.(index, 0)}
-          aria-label={`Open ${post.title}`}
-          className="relative block w-full overflow-hidden bg-line/40 cursor-zoom-in"
-        >
+        <div className="relative w-full overflow-hidden bg-line/40">
           <div
             className={`transition-opacity duration-500 ease-editorial ${
               coverLoaded ? 'opacity-100' : 'opacity-0'
@@ -156,7 +79,7 @@ export function PhotoCard({
               alt={post.title}
               width={cover.width}
               height={cover.height}
-              className="h-auto w-full object-cover transition-transform duration-700 ease-editorial group-hover:scale-[1.01]"
+              className="h-auto w-full object-cover transition-all duration-700 ease-editorial group-hover:scale-[1.01] group-hover:brightness-95"
               loading="lazy"
               onLoad={() => setCoverLoaded(true)}
               onError={() => setCoverLoaded(true)}
@@ -167,9 +90,67 @@ export function PhotoCard({
               1 / {photoCount}
             </span>
           )}
-        </button>
-        {figcaption}
+        </div>
+        <figcaption className="flex flex-col gap-2 px-1 md:flex-row md:items-baseline md:justify-between">
+          <div className="space-y-2">
+            <div className="flex items-baseline gap-3">
+              <span className="text-[10px] uppercase tracking-[0.3em] text-muted">
+                No. {String(displayNumber).padStart(2, '0')}
+              </span>
+              {post.location && (
+                <span className="text-[10px] uppercase tracking-[0.3em] text-muted">
+                  · {post.location}
+                </span>
+              )}
+            </div>
+            <div className="inline-flex items-baseline gap-3">
+              <h2 className="display text-xl leading-tight transition-colors duration-200 ease-editorial group-hover:text-ink/100 md:text-3xl">
+                {post.title}
+              </h2>
+              <span
+                aria-hidden
+                className="text-base text-muted transition-transform duration-300 ease-editorial group-hover:translate-x-1 md:text-xl"
+              >
+                →
+              </span>
+            </div>
+            {post.caption && (
+              <p className="max-w-prose text-sm leading-relaxed text-ink/70 transition-colors duration-200 ease-editorial group-hover:text-ink/85">
+                {post.caption}
+              </p>
+            )}
+          </div>
+          <div className="relative z-10 flex items-center gap-2 md:gap-4">
+            <span className="text-[10px] uppercase tracking-[0.3em] text-muted">
+              {formatDate(post.takenAt || post.createdAt)}
+            </span>
+            {isAdmin && (
+              <Link
+                href={`/admin/edit/${post.id}`}
+                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-[10px] uppercase tracking-[0.3em] text-muted underline-offset-4 hover:text-ink hover:underline md:min-h-0 md:min-w-0"
+              >
+                Edit
+              </Link>
+            )}
+            {isAdmin && onDelete && (
+              <button
+                type="button"
+                onClick={() => onDelete(post.id)}
+                className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-[10px] uppercase tracking-[0.3em] text-muted underline-offset-4 hover:text-ink hover:underline md:min-h-0 md:min-w-0"
+              >
+                Delete
+              </button>
+            )}
+          </div>
+        </figcaption>
       </figure>
+      <Link
+        href={href}
+        aria-label={`Open ${post.title}`}
+        className="absolute inset-0 cursor-pointer"
+      >
+        <span className="sr-only">{post.title}</span>
+      </Link>
     </article>
   );
 }
