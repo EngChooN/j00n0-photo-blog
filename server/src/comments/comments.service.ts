@@ -13,8 +13,8 @@ const DAILY_LIMIT_PER_POST = 5; // 5 comments per IP per post per day
 export class CommentsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  list(postId: string) {
-    return this.prisma.comment.findMany({
+  async list(postId: string, visitorIpHash: string) {
+    const rows = await this.prisma.comment.findMany({
       where: { postId },
       orderBy: { createdAt: 'asc' },
       select: {
@@ -23,8 +23,13 @@ export class CommentsService {
         name: true,
         body: true,
         createdAt: true,
+        visitorIpHash: true,
       },
     });
+    return rows.map(({ visitorIpHash: hash, ...rest }) => ({
+      ...rest,
+      isOwnedByVisitor: hash === visitorIpHash,
+    }));
   }
 
   async create(
@@ -78,13 +83,16 @@ export class CommentsService {
         createdAt: true,
       },
     });
-    return created;
+    return { ...created, isOwnedByVisitor: true };
   }
 
-  async remove(id: string) {
-    const comment = await this.prisma.comment.findUnique({ where: { id } });
-    if (!comment) throw new NotFoundException('Comment not found');
-    await this.prisma.comment.delete({ where: { id } });
+  async remove(id: string, visitorIpHash: string | null) {
+    const where =
+      visitorIpHash === null ? { id } : { id, visitorIpHash };
+    const result = await this.prisma.comment.deleteMany({ where });
+    if (result.count === 0) {
+      throw new NotFoundException('Comment not found');
+    }
     return { ok: true };
   }
 }

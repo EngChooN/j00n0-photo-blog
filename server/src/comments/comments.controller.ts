@@ -9,7 +9,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import type { Request } from 'express';
-import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { JwtAuthOptionalGuard } from '@/auth/guards/jwt-auth-optional.guard';
 import { getVisitorIpHash } from '@/lib/visitor-ip';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
@@ -19,8 +19,8 @@ export class CommentsController {
   constructor(private readonly comments: CommentsService) {}
 
   @Get('posts/:postId/comments')
-  list(@Param('postId') postId: string) {
-    return this.comments.list(postId);
+  list(@Param('postId') postId: string, @Req() req: Request) {
+    return this.comments.list(postId, getVisitorIpHash(req));
   }
 
   @Post('posts/:postId/comments')
@@ -32,9 +32,11 @@ export class CommentsController {
     return this.comments.create(postId, dto, getVisitorIpHash(req));
   }
 
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(JwtAuthOptionalGuard)
   @Delete('comments/:id')
-  remove(@Param('id') id: string) {
-    return this.comments.remove(id);
+  remove(@Param('id') id: string, @Req() req: Request) {
+    const user = req.user as { role?: string } | undefined;
+    const isAdmin = user?.role === 'admin';
+    return this.comments.remove(id, isAdmin ? null : getVisitorIpHash(req));
   }
 }

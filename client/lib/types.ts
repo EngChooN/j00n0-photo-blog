@@ -25,6 +25,7 @@ export type Comment = {
   name: string;
   body: string;
   createdAt: string;
+  isOwnedByVisitor: boolean;
 };
 
 export type LikeStatus = {

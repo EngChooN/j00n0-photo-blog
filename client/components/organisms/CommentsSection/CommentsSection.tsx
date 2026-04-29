@@ -154,12 +154,19 @@ export function CommentsSection({ postId }: Props) {
                   {formatDateTime(comment.createdAt)}
                 </span>
               </div>
-              {isAdmin && (
+              {(isAdmin || comment.isOwnedByVisitor) && (
                 <button
                   type="button"
-                  onClick={() => {
-                    if (window.confirm('이 댓글을 삭제할까요?')) {
-                      remove.mutate(comment.id);
+                  onClick={async () => {
+                    if (!window.confirm('이 댓글을 삭제할까요?')) return;
+                    try {
+                      await remove.mutateAsync(comment.id);
+                    } catch (e) {
+                      const message =
+                        e instanceof ApiError
+                          ? e.message
+                          : '댓글을 삭제하지 못했어요. 잠시 후 다시 시도해주세요.';
+                      window.alert(message);
                     }
                   }}
                   className="text-[10px] uppercase tracking-[0.3em] text-white/35 underline-offset-4 hover:text-white hover:underline"
