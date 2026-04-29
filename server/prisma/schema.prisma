@@ -9,15 +9,40 @@ datasource db {
 }
 
 model Post {
-  id        String   @id @default(cuid())
+  id        String       @id @default(cuid())
   title     String
-  caption   String   @default("")
-  location  String   @default("")
-  takenAt   String   @default("")
-  createdAt DateTime @default(now())
+  caption   String       @default("")
+  location  String       @default("")
+  takenAt   String       @default("")
+  createdAt DateTime     @default(now())
+  likeCount Int          @default(0)
   photos    Photo[]
+  comments  Comment[]
+  likes     LikeRecord[]
 
   @@index([createdAt])
+}
+
+model Comment {
+  id            String   @id @default(cuid())
+  postId        String
+  name          String
+  body          String
+  visitorIpHash String
+  createdAt     DateTime @default(now())
+  post          Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@index([visitorIpHash, createdAt])
+}
+
+model LikeRecord {
+  postId        String
+  visitorIpHash String
+  createdAt     DateTime @default(now())
+  post          Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([postId, visitorIpHash])
 }
 
 model Photo {

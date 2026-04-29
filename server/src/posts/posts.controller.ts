@@ -3,15 +3,19 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
   Param,
   Patch,
   Post,
+  Req,
   UploadedFiles,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+import type { Request } from 'express';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { getVisitorIpHash } from '@/lib/visitor-ip';
 import { PostsService } from './posts.service';
 import { CreatePostDto, UpdatePostDto } from './dto/post.dto';
 
@@ -56,5 +60,22 @@ export class PostsController {
   @Delete(':id')
   remove(@Param('id') id: string) {
     return this.posts.remove(id);
+  }
+
+  @Post(':id/like')
+  @HttpCode(200)
+  like(@Param('id') id: string, @Req() req: Request) {
+    return this.posts.like(id, getVisitorIpHash(req));
+  }
+
+  @Delete(':id/like')
+  @HttpCode(200)
+  unlike(@Param('id') id: string, @Req() req: Request) {
+    return this.posts.unlike(id, getVisitorIpHash(req));
+  }
+
+  @Get(':id/like')
+  hasLiked(@Param('id') id: string, @Req() req: Request) {
+    return this.posts.hasLiked(id, getVisitorIpHash(req));
   }
 }

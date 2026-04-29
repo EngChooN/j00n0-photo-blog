@@ -41,6 +41,83 @@ export class PostsService {
     return post;
   }
 
+  async like(postId: string, visitorIpHash: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { id: true },
+    });
+    if (!post) throw new NotFoundException('Post not found');
+
+    const existing = await this.prisma.likeRecord.findUnique({
+      where: { postId_visitorIpHash: { postId, visitorIpHash } },
+    });
+    if (existing) {
+      const current = await this.prisma.post.findUniqueOrThrow({
+        where: { id: postId },
+        select: { likeCount: true },
+      });
+      return { likeCount: current.likeCount, liked: true };
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await tx.likeRecord.create({
+        data: { postId, visitorIpHash },
+      });
+      return tx.post.update({
+        where: { id: postId },
+        data: { likeCount: { increment: 1 } },
+        select: { likeCount: true },
+      });
+    });
+    return { likeCount: updated.likeCount, liked: true };
+  }
+
+  async unlike(postId: string, visitorIpHash: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { id: true },
+    });
+    if (!post) throw new NotFoundException('Post not found');
+
+    const existing = await this.prisma.likeRecord.findUnique({
+      where: { postId_visitorIpHash: { postId, visitorIpHash } },
+    });
+    if (!existing) {
+      const current = await this.prisma.post.findUniqueOrThrow({
+        where: { id: postId },
+        select: { likeCount: true },
+      });
+      return { likeCount: current.likeCount, liked: false };
+    }
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await tx.likeRecord.delete({
+        where: { postId_visitorIpHash: { postId, visitorIpHash } },
+      });
+      return tx.post.update({
+        where: { id: postId },
+        data: { likeCount: { decrement: 1 } },
+        select: { likeCount: true },
+      });
+    });
+    return {
+      likeCount: Math.max(0, updated.likeCount),
+      liked: false,
+    };
+  }
+
+  async hasLiked(postId: string, visitorIpHash: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { likeCount: true },
+    });
+    if (!post) throw new NotFoundException('Post not found');
+    const record = await this.prisma.likeRecord.findUnique({
+      where: { postId_visitorIpHash: { postId, visitorIpHash } },
+    });
+    return { likeCount: post.likeCount, liked: !!record };
+  }
+
   async create(files: Express.Multer.File[], dto: CreatePostDto) {
     if (!files || files.length === 0) {
       throw new BadRequestException('At least one photo is required');
