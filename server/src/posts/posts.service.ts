@@ -6,16 +6,28 @@ import {
 import { PrismaService } from '@/prisma/prisma.service';
 import { StorageService } from '@/storage/storage.service';
 import sharp from 'sharp';
+import exifr from 'exifr';
 import { randomUUID } from 'node:crypto';
 import { CreatePostDto, UpdatePostDto } from './dto/post.dto';
 
 const MAX_DIMENSION = 2400;
 const MAX_FILES_PER_POST = 20;
 
+type ExifData = {
+  camera?: string;
+  lens?: string;
+  shutterSpeed?: string;
+  aperture?: string;
+  iso?: number;
+  focalLength?: string;
+};
+
 type ProcessedFile = {
   src: string;
   width: number;
   height: number;
+  exif: ExifData | null;
+  takenAtFromExif: string | null;
 };
 
 @Injectable()
@@ -130,19 +142,26 @@ export class PostsService {
 
     const processed = await this.uploadFiles(files);
 
+    // Multipart forms always send strings, so blank takenAt arrives as "".
+    // On create, treat blank as "not provided" and fall back to EXIF.
+    // (update keeps the user's blank verbatim — see below.)
+    const dtoTakenAt = dto.takenAt?.trim();
+    const takenAt = dtoTakenAt || processed[0]?.takenAtFromExif || '';
+
     try {
       return await this.prisma.post.create({
         data: {
           title: dto.title,
           caption: dto.caption ?? '',
           location: dto.location ?? '',
-          takenAt: dto.takenAt ?? '',
+          takenAt,
           photos: {
             create: processed.map((p, index) => ({
               src: p.src,
               width: p.width,
               height: p.height,
               position: index,
+              exif: p.exif ?? undefined,
             })),
           },
         },
@@ -208,6 +227,8 @@ export class PostsService {
             ...(dto.title !== undefined && { title: dto.title }),
             ...(dto.caption !== undefined && { caption: dto.caption }),
             ...(dto.location !== undefined && { location: dto.location }),
+            // On update, the user's takenAt is passed through verbatim — blank
+            // means "clear it". EXIF auto-fill applies on create only.
             ...(dto.takenAt !== undefined && { takenAt: dto.takenAt }),
             ...(processed.length && {
               photos: {
@@ -216,6 +237,7 @@ export class PostsService {
                   width: p.width,
                   height: p.height,
                   position: maxPosition + 1 + i,
+                  exif: p.exif ?? undefined,
                 })),
               },
             }),
@@ -283,16 +305,33 @@ export class PostsService {
   private async processOne(
     file: Express.Multer.File,
   ): Promise<ProcessedFile> {
-    const output = await sharp(file.buffer, { failOn: 'none' })
-      .rotate()
-      .resize({
-        width: MAX_DIMENSION,
-        height: MAX_DIMENSION,
-        fit: 'inside',
-        withoutEnlargement: true,
-      })
-      .webp({ quality: 82 })
-      .toBuffer({ resolveWithObject: true });
+    const [output, rawExif] = await Promise.all([
+      sharp(file.buffer, { failOn: 'none' })
+        .rotate()
+        .resize({
+          width: MAX_DIMENSION,
+          height: MAX_DIMENSION,
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
+        .webp({ quality: 82 })
+        .toBuffer({ resolveWithObject: true }),
+      exifr
+        .parse(file.buffer, {
+          pick: [
+            'Make',
+            'Model',
+            'LensModel',
+            'ExposureTime',
+            'FNumber',
+            'ISO',
+            'FocalLength',
+            'DateTimeOriginal',
+          ],
+          gps: false,
+        })
+        .catch(() => null),
+    ]);
 
     const filename = `${Date.now()}-${randomUUID()}.webp`;
     const src = await this.storage.upload(filename, output.data);
@@ -300,6 +339,71 @@ export class PostsService {
       src,
       width: output.info.width,
       height: output.info.height,
+      exif: formatExif(rawExif),
+      takenAtFromExif: formatExifDate(rawExif?.DateTimeOriginal),
     };
   }
+}
+
+function formatExif(raw: Record<string, unknown> | null): ExifData | null {
+  if (!raw) return null;
+  const camera = formatCamera(raw.Make, raw.Model);
+  const lens = typeof raw.LensModel === 'string' ? raw.LensModel : undefined;
+  const shutterSpeed = formatShutter(raw.ExposureTime);
+  const aperture = formatAperture(raw.FNumber);
+  const iso = typeof raw.ISO === 'number' ? raw.ISO : undefined;
+  const focalLength = formatFocalLength(raw.FocalLength);
+
+  const exif: ExifData = {};
+  if (camera) exif.camera = camera;
+  if (lens) exif.lens = lens;
+  if (shutterSpeed) exif.shutterSpeed = shutterSpeed;
+  if (aperture) exif.aperture = aperture;
+  if (iso !== undefined) exif.iso = iso;
+  if (focalLength) exif.focalLength = focalLength;
+  return Object.keys(exif).length ? exif : null;
+}
+
+function formatCamera(make: unknown, model: unknown): string | undefined {
+  const m = typeof model === 'string' ? model.trim() : '';
+  if (!m) return undefined;
+  const mk = typeof make === 'string' ? make.trim() : '';
+  if (!mk) return m;
+  // Compare first words so "NIKON CORPORATION" + "NIKON Z 6" stays "NIKON Z 6".
+  const mkFirst = mk.split(/\s+/)[0].toUpperCase();
+  const mFirst = m.split(/\s+/)[0].toUpperCase();
+  if (mkFirst === mFirst) return m;
+  return `${mk} ${m}`;
+}
+
+function formatShutter(value: unknown): string | undefined {
+  if (typeof value !== 'number' || !isFinite(value) || value <= 0) return undefined;
+  // 0.5s and slower → seconds; faster → 1/N fraction.
+  if (value >= 0.5) {
+    return Number.isInteger(value) ? `${value}s` : `${value.toFixed(1)}s`;
+  }
+  return `1/${Math.round(1 / value)}s`;
+}
+
+function formatAperture(value: unknown): string | undefined {
+  if (typeof value !== 'number' || !isFinite(value) || value <= 0) return undefined;
+  // Show one decimal only when needed (f/1.8 vs f/8).
+  const text = Number.isInteger(value) ? `${value}` : value.toFixed(1);
+  return `f/${text}`;
+}
+
+function formatFocalLength(value: unknown): string | undefined {
+  if (typeof value !== 'number' || !isFinite(value) || value <= 0) return undefined;
+  return `${Math.round(value)}mm`;
+}
+
+function formatExifDate(value: unknown): string | null {
+  if (!(value instanceof Date) || Number.isNaN(value.getTime())) return null;
+  // EXIF DateTimeOriginal carries no timezone; exifr constructs the Date as if
+  // wall-clock were UTC. Use UTC getters so the wall-clock date survives
+  // regardless of the runtime's local TZ.
+  const year = value.getUTCFullYear();
+  const month = String(value.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(value.getUTCDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }

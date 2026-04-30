@@ -7,6 +7,7 @@ import { Carousel } from '@/components/molecules/Carousel';
 import { LikeButton } from '@/components/atoms/LikeButton';
 import { CommentsButton } from '@/components/atoms/CommentsButton';
 import { ShareButton } from '@/components/atoms/ShareButton';
+import { ExifLines } from '@/components/atoms/ExifLines';
 import { CommentsModal } from '@/components/organisms/CommentsSection';
 import { useFadeIn } from '@/hooks/useFadeIn';
 import type { Post } from '@/lib/types';
@@ -96,7 +97,7 @@ export function PostDetailCarousel({ post }: Props) {
           </Link>
         </header>
 
-        <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-6 py-8 md:px-12">
+        <div className="relative z-10 flex min-h-0 flex-1 items-center justify-center px-3 py-4 md:px-12 md:py-8">
           <Carousel
             photos={post.photos}
             index={index}
@@ -104,7 +105,13 @@ export function PostDetailCarousel({ post }: Props) {
           />
         </div>
 
-        <footer className="relative z-10 max-h-[200px] flex-shrink-0 overflow-y-auto overscroll-contain border-t border-white/10 px-6 py-6 md:max-h-[240px] md:px-12">
+        {post.photos[index]?.exif && (
+          <div className="relative z-10 flex-shrink-0 border-t border-white/10 px-6 py-2 md:px-12 md:py-3">
+            <ExifLines exif={post.photos[index].exif} />
+          </div>
+        )}
+
+        <footer className="relative z-10 max-h-[160px] flex-shrink-0 overflow-y-auto overscroll-contain border-t border-white/10 px-6 py-4 md:max-h-[240px] md:px-12 md:py-6">
           <div className="mx-auto max-w-[1100px] space-y-2">
             <h2 className="display text-xl leading-tight text-white md:text-3xl">
               {post.title}

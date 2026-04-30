@@ -52,6 +52,7 @@ model Photo {
   width     Int
   height    Int
   position  Int
+  exif      Json?
   createdAt DateTime @default(now())
   post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
 

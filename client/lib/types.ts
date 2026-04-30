@@ -1,3 +1,12 @@
+export type Exif = {
+  camera?: string;
+  lens?: string;
+  shutterSpeed?: string;
+  aperture?: string;
+  iso?: number;
+  focalLength?: string;
+};
+
 export type Photo = {
   id: string;
   postId: string;
@@ -5,6 +14,7 @@ export type Photo = {
   width: number;
   height: number;
   position: number;
+  exif: Exif | null;
   createdAt: string;
 };
 
