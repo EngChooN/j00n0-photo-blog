@@ -3,6 +3,7 @@ import './globals.css';
 import { Providers } from './providers';
 import { Header } from '@/components/organisms/Header';
 import { Footer } from '@/components/organisms/Footer';
+import { Analytics } from '@vercel/analytics/next';
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ?? 'https://j00n0-photo-blog.vercel.app';
@@ -71,6 +72,7 @@ export default function RootLayout({
           <main>{children}</main>
           <Footer />
         </Providers>
+        <Analytics />
       </body>
     </html>
   );
