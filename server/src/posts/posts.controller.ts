@@ -15,24 +15,30 @@ import {
 import type { Request } from 'express';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
+import { JwtAuthOptionalGuard } from '@/auth/guards/jwt-auth-optional.guard';
 import { getVisitorIpHash } from '@/lib/visitor-ip';
 import { PostsService } from './posts.service';
 import { CreatePostDto, UpdatePostDto } from './dto/post.dto';
 
 const MAX_FILES = 20;
 
+const isAdmin = (req: Request): boolean =>
+  (req.user as { role?: string } | undefined)?.role === 'admin';
+
 @Controller('posts')
 export class PostsController {
   constructor(private readonly posts: PostsService) {}
 
+  @UseGuards(JwtAuthOptionalGuard)
   @Get()
-  list() {
-    return this.posts.list();
+  list(@Req() req: Request) {
+    return this.posts.list(isAdmin(req));
   }
 
+  @UseGuards(JwtAuthOptionalGuard)
   @Get(':id')
-  getOne(@Param('id') id: string) {
-    return this.posts.getOne(id);
+  getOne(@Param('id') id: string, @Req() req: Request) {
+    return this.posts.getOne(id, isAdmin(req));
   }
 
   @UseGuards(JwtAuthGuard)

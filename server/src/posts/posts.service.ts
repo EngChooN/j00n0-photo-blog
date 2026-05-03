@@ -37,20 +37,27 @@ export class PostsService {
     private readonly storage: StorageService,
   ) {}
 
-  list() {
-    return this.prisma.post.findMany({
+  async list(isAdmin: boolean) {
+    const posts = await this.prisma.post.findMany({
       orderBy: { createdAt: 'desc' },
-      include: { photos: { orderBy: { position: 'asc' } } },
+      include: {
+        photos: { orderBy: { position: 'asc' } },
+        project: { select: { id: true, title: true, isPublic: true } },
+      },
     });
+    return posts.map((p) => maskProject(p, isAdmin));
   }
 
-  async getOne(id: string) {
+  async getOne(id: string, isAdmin: boolean) {
     const post = await this.prisma.post.findUnique({
       where: { id },
-      include: { photos: { orderBy: { position: 'asc' } } },
+      include: {
+        photos: { orderBy: { position: 'asc' } },
+        project: { select: { id: true, title: true, isPublic: true } },
+      },
     });
     if (!post) throw new NotFoundException('Post not found');
-    return post;
+    return maskProject(post, isAdmin);
   }
 
   async like(postId: string, visitorIpHash: string) {
@@ -140,6 +147,9 @@ export class PostsService {
       );
     }
 
+    const projectAssignment = await this.resolveProjectAssignment(
+      dto.projectId,
+    );
     const processed = await this.uploadFiles(files);
 
     // Multipart forms always send strings, so blank takenAt arrives as "".
@@ -149,12 +159,13 @@ export class PostsService {
     const takenAt = dtoTakenAt || processed[0]?.takenAtFromExif || '';
 
     try {
-      return await this.prisma.post.create({
+      const created = await this.prisma.post.create({
         data: {
           title: dto.title,
           caption: dto.caption ?? '',
           location: dto.location ?? '',
           takenAt,
+          ...projectAssignment,
           photos: {
             create: processed.map((p, index) => ({
               src: p.src,
@@ -165,8 +176,12 @@ export class PostsService {
             })),
           },
         },
-        include: { photos: { orderBy: { position: 'asc' } } },
+        include: {
+          photos: { orderBy: { position: 'asc' } },
+          project: { select: { id: true, title: true, isPublic: true } },
+        },
       });
+      return maskProject(created, true);
     } catch (error) {
       await this.storage.remove(processed.map((p) => p.src));
       throw error;
@@ -209,6 +224,9 @@ export class PostsService {
       -1,
     );
 
+    const projectAssignment = await this.resolveProjectAssignment(
+      dto.projectId,
+    );
     const processed = addedFiles.length
       ? await this.uploadFiles(addedFiles)
       : [];
@@ -230,6 +248,7 @@ export class PostsService {
             // On update, the user's takenAt is passed through verbatim — blank
             // means "clear it". EXIF auto-fill applies on create only.
             ...(dto.takenAt !== undefined && { takenAt: dto.takenAt }),
+            ...projectAssignment,
             ...(processed.length && {
               photos: {
                 create: processed.map((p, i) => ({
@@ -245,7 +264,10 @@ export class PostsService {
         });
         return tx.post.findUniqueOrThrow({
           where: { id },
-          include: { photos: { orderBy: { position: 'asc' } } },
+          include: {
+            photos: { orderBy: { position: 'asc' } },
+            project: { select: { id: true, title: true, isPublic: true } },
+          },
         });
       });
     } catch (error) {
@@ -255,7 +277,7 @@ export class PostsService {
 
     // DB is the source of truth; clean up storage after commit succeeds.
     await this.storage.remove(removedPhotos.map((p) => p.src));
-    return updated;
+    return maskProject(updated, true);
   }
 
   async remove(id: string) {
@@ -268,6 +290,20 @@ export class PostsService {
     await this.prisma.post.delete({ where: { id } });
     await this.storage.remove(post.photos.map((p) => p.src));
     return { ok: true };
+  }
+
+  private async resolveProjectAssignment(
+    raw: string | undefined,
+  ): Promise<{ projectId?: string | null }> {
+    if (raw === undefined) return {};
+    const trimmed = raw.trim();
+    if (trimmed === '' || trimmed === 'null') return { projectId: null };
+    const found = await this.prisma.project.findUnique({
+      where: { id: trimmed },
+      select: { id: true },
+    });
+    if (!found) throw new BadRequestException('Project not found');
+    return { projectId: trimmed };
   }
 
   private async uploadFiles(
@@ -343,6 +379,23 @@ export class PostsService {
       takenAtFromExif: formatExifDate(rawExif?.DateTimeOriginal),
     };
   }
+}
+
+type WithProject<T> = T & {
+  project: { id: string; title: string; isPublic: boolean } | null;
+};
+
+function maskProject<T>(post: WithProject<T>, isAdmin: boolean) {
+  const { project, ...rest } = post;
+  if (!project || (!isAdmin && !project.isPublic)) {
+    return { ...rest, project: null } as T & {
+      project: { id: string; title: string } | null;
+    };
+  }
+  return {
+    ...rest,
+    project: { id: project.id, title: project.title },
+  } as T & { project: { id: string; title: string } | null };
 }
 
 function formatExif(raw: Record<string, unknown> | null): ExifData | null {

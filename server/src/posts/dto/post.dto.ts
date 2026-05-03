@@ -26,6 +26,11 @@ export class CreatePostDto {
   @IsString()
   @MaxLength(20)
   takenAt?: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  projectId?: string;
 }
 
 const toStringArray = ({ value }: { value: unknown }): string[] => {
@@ -61,4 +66,9 @@ export class UpdatePostDto {
   @ArrayMaxSize(20)
   @IsString({ each: true })
   removedPhotoIds?: string[];
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(40)
+  projectId?: string;
 }

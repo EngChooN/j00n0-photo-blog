@@ -16,11 +16,35 @@ model Post {
   takenAt   String       @default("")
   createdAt DateTime     @default(now())
   likeCount Int          @default(0)
+  projectId String?
+  project   Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
   photos    Photo[]
   comments  Comment[]
   likes     LikeRecord[]
 
   @@index([createdAt])
+  @@index([projectId])
+}
+
+enum ProjectStatus {
+  ongoing
+  completed
+}
+
+model Project {
+  id            String        @id @default(cuid())
+  title         String
+  concept       String?
+  coverPhotoUrl String?
+  startDate     String?
+  endDate       String?
+  status        ProjectStatus @default(ongoing)
+  isPublic      Boolean       @default(true)
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  posts         Post[]
+
+  @@index([isPublic, status, updatedAt(sort: Desc)])
 }
 
 model Comment {
