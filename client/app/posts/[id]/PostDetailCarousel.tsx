@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { Carousel } from '@/components/molecules/Carousel';
 import { LikeButton } from '@/components/atoms/LikeButton';
 import { CommentsButton } from '@/components/atoms/CommentsButton';
@@ -32,6 +32,17 @@ function formatDate(value: string) {
 
 export function PostDetailCarousel({ post }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromProjectId = searchParams.get('fromProject');
+  // Only honor ?fromProject=xxx if the post actually belongs to that project —
+  // otherwise the URL is stale or tampered, fall back to plain Back.
+  const backToProject =
+    fromProjectId && post.project?.id === fromProjectId ? post.project : null;
+  const backHref = backToProject ? `/projects/${backToProject.id}` : '/';
+  const backLabel = backToProject
+    ? `← ${backToProject.title}`
+    : '← Back';
+
   const [index, setIndex] = useState(0);
   const [shareLabel, setShareLabel] = useState<'Share' | 'Copied!' | 'Failed'>(
     'Share',
@@ -66,12 +77,12 @@ export function PostDetailCarousel({ post }: Props) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         if (height > PEEK_H) setHeight(PEEK_H);
-        else router.push('/');
+        else router.push(backHref);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [router, height]);
+  }, [router, height, backHref]);
 
   const toggle = () =>
     setHeight((h) => (h > (PEEK_H + maxH) / 2 ? PEEK_H : maxH));
@@ -155,10 +166,10 @@ export function PostDetailCarousel({ post }: Props) {
     <div className="fixed inset-0 z-50 flex flex-col bg-black text-white/90">
       <header className="relative z-10 flex flex-shrink-0 items-center justify-between border-b border-white/10 px-6 py-4 md:px-12">
         <Link
-          href="/"
+          href={backHref}
           className="text-[11px] uppercase tracking-[0.25em] text-white/50 transition-colors hover:text-white"
         >
-          ← Back
+          {backLabel}
         </Link>
         {total > 1 && (
           <span className="text-[10px] uppercase tracking-[0.3em] text-white/40">

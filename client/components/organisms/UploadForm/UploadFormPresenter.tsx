@@ -6,7 +6,9 @@ import { Input } from '@/components/atoms/Input';
 import { Textarea } from '@/components/atoms/Textarea';
 import { FormField } from '@/components/molecules/FormField';
 import { PhotoStrip } from '@/components/molecules/PhotoStrip';
+import { ProjectSelector } from '@/components/molecules/ProjectSelector';
 import type { PostMetadataInput } from '@/lib/validation';
+import type { ProjectListItem } from '@/lib/types';
 
 type Props = {
   register: UseFormRegister<PostMetadataInput>;
@@ -18,6 +20,10 @@ type Props = {
   onSubmit: () => void;
   isSubmitting: boolean;
   serverError?: string;
+  projects: ProjectListItem[];
+  projectsLoading: boolean;
+  projectId: string;
+  onProjectChange: (id: string) => void;
 };
 
 export function UploadFormPresenter({
@@ -30,6 +36,10 @@ export function UploadFormPresenter({
   onSubmit,
   isSubmitting,
   serverError,
+  projects,
+  projectsLoading,
+  projectId,
+  onProjectChange,
 }: Props) {
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-8 md:space-y-12">
@@ -56,6 +66,12 @@ export function UploadFormPresenter({
             {...register('title')}
           />
         </FormField>
+        <ProjectSelector
+          projects={projects}
+          isLoading={projectsLoading}
+          value={projectId}
+          onChange={onProjectChange}
+        />
         <FormField
           label="Location"
           htmlFor="location"

@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import type { Post } from '@/lib/types';
@@ -57,5 +58,10 @@ export default async function PostPage({ params }: { params: Params }) {
   const post = await fetchPost(id);
   if (!post) notFound();
 
-  return <PostDetailCarousel post={post} />;
+  // Suspense bound for useSearchParams() inside PostDetailCarousel.
+  return (
+    <Suspense fallback={null}>
+      <PostDetailCarousel post={post} />
+    </Suspense>
+  );
 }

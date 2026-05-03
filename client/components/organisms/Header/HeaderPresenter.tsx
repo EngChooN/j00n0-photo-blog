@@ -49,6 +49,7 @@ export function HeaderPresenter({ isAdmin, onLogout }: Props) {
         <Logo />
         <nav className="hidden items-center gap-7 md:flex">
           <NavLink href="/">Journal</NavLink>
+          <NavLink href="/projects">Projects</NavLink>
           <NavLink href="/guestbook">Guestbook</NavLink>
           {isAdmin && <NavLink href="/admin/upload">Upload</NavLink>}
           {isAdmin && (
@@ -106,6 +107,13 @@ export function HeaderPresenter({ isAdmin, onLogout }: Props) {
                 className="display text-4xl font-light tracking-[-0.02em] text-ink"
               >
                 Journal
+              </Link>
+              <Link
+                href="/projects"
+                onClick={() => setMenuOpen(false)}
+                className="display text-4xl font-light tracking-[-0.02em] text-ink"
+              >
+                Projects
               </Link>
               <Link
                 href="/guestbook"

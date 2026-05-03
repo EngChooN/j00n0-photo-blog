@@ -24,6 +24,8 @@ export function useUpdatePost() {
       form.append('caption', metadata.caption ?? '');
       form.append('location', metadata.location ?? '');
       form.append('takenAt', metadata.takenAt ?? '');
+      // "" clears the assignment server-side, "<id>" sets it.
+      form.append('projectId', metadata.projectId ?? '');
       addedFiles.forEach((file) => form.append('addedFiles', file));
       removedPhotoIds.forEach((photoId) =>
         form.append('removedPhotoIds', photoId),
@@ -35,6 +37,8 @@ export function useUpdatePost() {
         old?.map((p) => (p.id === updated.id ? updated : p)) ?? [updated],
       );
       queryClient.invalidateQueries({ queryKey: POSTS_QUERY_KEY });
+      // Project membership may have changed — bust both summary and detail.
+      queryClient.invalidateQueries({ queryKey: ['projects'] });
     },
   });
 }

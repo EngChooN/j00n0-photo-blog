@@ -9,6 +9,7 @@ import {
   type PostMetadataInput,
 } from '@/lib/validation';
 import { useCreatePost } from '@/hooks/mutations/useCreatePost';
+import { useProjects } from '@/hooks/queries/useProjects';
 import { UploadFormPresenter } from './UploadFormPresenter';
 
 export function UploadFormContainer() {
@@ -16,11 +17,19 @@ export function UploadFormContainer() {
   const [serverError, setServerError] = useState<string | undefined>();
   const [files, setFiles] = useState<File[]>([]);
   const [fileError, setFileError] = useState<string | undefined>();
+  const [projectId, setProjectId] = useState('');
   const create = useCreatePost();
+  const { data: projects, isLoading: projectsLoading } = useProjects();
 
   const form = useForm<PostMetadataInput>({
     resolver: zodResolver(postMetadataSchema),
-    defaultValues: { title: '', caption: '', location: '', takenAt: '' },
+    defaultValues: {
+      title: '',
+      caption: '',
+      location: '',
+      takenAt: '',
+      projectId: '',
+    },
   });
 
   const previews = useMemo(
@@ -51,7 +60,7 @@ export function UploadFormContainer() {
       return;
     }
     try {
-      await create.mutateAsync({ ...values, files });
+      await create.mutateAsync({ ...values, projectId, files });
       router.push('/');
     } catch (error) {
       const msg =
@@ -73,6 +82,10 @@ export function UploadFormContainer() {
       onSubmit={onSubmit}
       isSubmitting={form.formState.isSubmitting || create.isPending}
       serverError={serverError}
+      projects={projects ?? []}
+      projectsLoading={projectsLoading}
+      projectId={projectId}
+      onProjectChange={setProjectId}
     />
   );
 }

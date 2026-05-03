@@ -18,6 +18,13 @@ export type Photo = {
   createdAt: string;
 };
 
+export type ProjectStatus = 'ongoing' | 'completed';
+
+export type ProjectSummary = {
+  id: string;
+  title: string;
+};
+
 export type Post = {
   id: string;
   title: string;
@@ -27,6 +34,39 @@ export type Post = {
   createdAt: string;
   likeCount: number;
   photos: Photo[];
+  project: ProjectSummary | null;
+};
+
+export type ProjectListItem = {
+  id: string;
+  title: string;
+  concept: string | null;
+  coverPhotoUrl: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  status: ProjectStatus;
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count: { posts: number };
+};
+
+// Posts inside a project response don't carry the project relation back —
+// the parent project is the context. This narrower shape makes that explicit.
+export type ProjectPost = Omit<Post, 'project'>;
+
+export type ProjectDetail = {
+  id: string;
+  title: string;
+  concept: string | null;
+  coverPhotoUrl: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  status: ProjectStatus;
+  isPublic: boolean;
+  createdAt: string;
+  updatedAt: string;
+  posts: ProjectPost[];
 };
 
 export type Comment = {

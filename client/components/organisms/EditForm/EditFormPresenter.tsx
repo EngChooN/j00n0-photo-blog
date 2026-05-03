@@ -6,8 +6,9 @@ import { Input } from '@/components/atoms/Input';
 import { Textarea } from '@/components/atoms/Textarea';
 import { FormField } from '@/components/molecules/FormField';
 import { PhotoStrip } from '@/components/molecules/PhotoStrip';
+import { ProjectSelector } from '@/components/molecules/ProjectSelector';
 import { Hairline } from '@/components/atoms/Hairline';
-import type { Photo } from '@/lib/types';
+import type { Photo, ProjectListItem } from '@/lib/types';
 import type { PostMetadataInput } from '@/lib/validation';
 
 type Props = {
@@ -24,6 +25,10 @@ type Props = {
   isSubmitting: boolean;
   isDeleting: boolean;
   serverError?: string;
+  projects: ProjectListItem[];
+  projectsLoading: boolean;
+  projectId: string;
+  onProjectChange: (id: string) => void;
 };
 
 export function EditFormPresenter({
@@ -40,6 +45,10 @@ export function EditFormPresenter({
   isSubmitting,
   isDeleting,
   serverError,
+  projects,
+  projectsLoading,
+  projectId,
+  onProjectChange,
 }: Props) {
   return (
     <form onSubmit={onSubmit} noValidate className="space-y-8 md:space-y-12">
@@ -66,6 +75,12 @@ export function EditFormPresenter({
             {...register('title')}
           />
         </FormField>
+        <ProjectSelector
+          projects={projects}
+          isLoading={projectsLoading}
+          value={projectId}
+          onChange={onProjectChange}
+        />
         <FormField
           label="Location"
           htmlFor="location"

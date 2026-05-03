@@ -9,6 +9,9 @@ type Props = {
   isLoading: boolean;
   isAdmin: boolean;
   onDelete: (id: string) => void;
+  hideProjectLabel?: boolean;
+  getProjectIndexLabel?: (postId: string, index: number) => string;
+  backToProjectId?: string;
 };
 
 export function PhotoGridPresenter({
@@ -16,6 +19,9 @@ export function PhotoGridPresenter({
   isLoading,
   isAdmin,
   onDelete,
+  hideProjectLabel,
+  getProjectIndexLabel,
+  backToProjectId,
 }: Props) {
   if (isLoading) {
     return (
@@ -43,6 +49,9 @@ export function PhotoGridPresenter({
           displayNumber={total - index}
           isAdmin={isAdmin}
           onDelete={onDelete}
+          hideProjectLabel={hideProjectLabel}
+          projectIndexLabel={getProjectIndexLabel?.(post.id, index)}
+          backToProjectId={backToProjectId}
         />
       ))}
     </div>

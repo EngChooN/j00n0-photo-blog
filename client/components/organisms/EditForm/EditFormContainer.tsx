@@ -11,6 +11,7 @@ import {
 import { useGetPost } from '@/hooks/queries/useGetPost';
 import { useUpdatePost } from '@/hooks/mutations/useUpdatePost';
 import { useDeletePost } from '@/hooks/mutations/useDeletePost';
+import { useProjects } from '@/hooks/queries/useProjects';
 import { EditFormPresenter } from './EditFormPresenter';
 
 type Props = { postId: string };
@@ -20,14 +21,22 @@ export function EditFormContainer({ postId }: Props) {
   const { data: post, isSuccess, isLoading } = useGetPost(postId);
   const update = useUpdatePost();
   const remove = useDeletePost();
+  const { data: projects, isLoading: projectsLoading } = useProjects();
 
   const [removedIds, setRemovedIds] = useState<Set<string>>(new Set());
   const [newFiles, setNewFiles] = useState<File[]>([]);
   const [serverError, setServerError] = useState<string | undefined>();
+  const [projectId, setProjectId] = useState('');
 
   const form = useForm<PostMetadataInput>({
     resolver: zodResolver(postMetadataSchema),
-    defaultValues: { title: '', caption: '', location: '', takenAt: '' },
+    defaultValues: {
+      title: '',
+      caption: '',
+      location: '',
+      takenAt: '',
+      projectId: '',
+    },
   });
 
   useEffect(() => {
@@ -37,7 +46,9 @@ export function EditFormContainer({ postId }: Props) {
       caption: post.caption,
       location: post.location,
       takenAt: post.takenAt,
+      projectId: post.project?.id ?? '',
     });
+    setProjectId(post.project?.id ?? '');
     setRemovedIds(new Set());
     setNewFiles([]);
     // Resets bound to the post identity, not on every cache update.
@@ -92,6 +103,7 @@ export function EditFormContainer({ postId }: Props) {
       await update.mutateAsync({
         id: post.id,
         ...values,
+        projectId,
         addedFiles: newFiles,
         removedPhotoIds: Array.from(removedIds),
       });
@@ -141,6 +153,10 @@ export function EditFormContainer({ postId }: Props) {
       isSubmitting={form.formState.isSubmitting || update.isPending}
       isDeleting={remove.isPending}
       serverError={serverError}
+      projects={projects ?? []}
+      projectsLoading={projectsLoading}
+      projectId={projectId}
+      onProjectChange={setProjectId}
     />
   );
 }

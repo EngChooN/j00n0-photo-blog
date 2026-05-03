@@ -15,11 +15,18 @@ export function useCreatePost() {
       if (input.caption) form.append('caption', input.caption);
       if (input.location) form.append('location', input.location);
       if (input.takenAt) form.append('takenAt', input.takenAt);
+      if (input.projectId) form.append('projectId', input.projectId);
       input.files.forEach((file) => form.append('files', file));
       return api.postForm<Post>('/posts', form);
     },
-    onSuccess: () => {
+    onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: POSTS_QUERY_KEY });
+      if (created.project) {
+        queryClient.invalidateQueries({ queryKey: ['projects'] });
+        queryClient.invalidateQueries({
+          queryKey: ['projects', created.project.id],
+        });
+      }
     },
   });
 }

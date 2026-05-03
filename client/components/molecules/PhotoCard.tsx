@@ -12,6 +12,9 @@ type Props = {
   displayNumber: number;
   isAdmin?: boolean;
   onDelete?: (id: string) => void;
+  hideProjectLabel?: boolean;
+  projectIndexLabel?: string;
+  backToProjectId?: string;
 };
 
 const layouts: { className: string; span: number }[] = [
@@ -36,7 +39,16 @@ function formatDate(value: string) {
     .toUpperCase();
 }
 
-export function PhotoCard({ post, index, displayNumber, isAdmin, onDelete }: Props) {
+export function PhotoCard({
+  post,
+  index,
+  displayNumber,
+  isAdmin,
+  onDelete,
+  hideProjectLabel,
+  projectIndexLabel,
+  backToProjectId,
+}: Props) {
   const layout = layouts[index % layouts.length];
   const cover = post.photos[0];
   const photoCount = post.photos.length;
@@ -53,7 +65,12 @@ export function PhotoCard({ post, index, displayNumber, isAdmin, onDelete }: Pro
 
   if (!cover) return null;
 
-  const href = `/posts/${post.id}`;
+  const href = backToProjectId
+    ? `/posts/${post.id}?fromProject=${backToProjectId}`
+    : `/posts/${post.id}`;
+  const numberLabel = projectIndexLabel
+    ? projectIndexLabel
+    : `No. ${String(displayNumber).padStart(2, '0')}`;
 
   const articleClass = [
     'group',
@@ -93,13 +110,24 @@ export function PhotoCard({ post, index, displayNumber, isAdmin, onDelete }: Pro
         </div>
         <figcaption className="flex flex-col gap-2 px-1">
           <div className="space-y-2">
-            <div className="flex items-baseline gap-3">
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className="text-[10px] uppercase tracking-[0.3em] text-muted">
-                No. {String(displayNumber).padStart(2, '0')}
+                {numberLabel}
               </span>
               {post.location && (
                 <span className="text-[10px] uppercase tracking-[0.3em] text-muted">
                   · {post.location}
+                </span>
+              )}
+              {!hideProjectLabel && post.project && (
+                <span className="relative z-10 inline-block max-w-[12ch] truncate text-[10px] uppercase tracking-[0.3em] text-muted">
+                  ·{' '}
+                  <Link
+                    href={`/projects/${post.project.id}`}
+                    className="underline-offset-4 hover:text-ink hover:underline"
+                  >
+                    {post.project.title}
+                  </Link>
                 </span>
               )}
             </div>
