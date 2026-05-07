@@ -33,6 +33,8 @@ export type Post = {
   takenAt: string;
   createdAt: string;
   likeCount: number;
+  commentCount: number;
+  viewCount: number;
   photos: Photo[];
   project: ProjectSummary | null;
 };

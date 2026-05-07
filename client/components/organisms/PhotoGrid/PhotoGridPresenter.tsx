@@ -7,8 +7,6 @@ import { EmptyState } from '@/components/molecules/EmptyState';
 type Props = {
   posts: Post[];
   isLoading: boolean;
-  isAdmin: boolean;
-  onDelete: (id: string) => void;
   hideProjectLabel?: boolean;
   getProjectIndexLabel?: (postId: string, index: number) => string;
   backToProjectId?: string;
@@ -17,8 +15,6 @@ type Props = {
 export function PhotoGridPresenter({
   posts,
   isLoading,
-  isAdmin,
-  onDelete,
   hideProjectLabel,
   getProjectIndexLabel,
   backToProjectId,
@@ -47,8 +43,6 @@ export function PhotoGridPresenter({
           post={post}
           index={index}
           displayNumber={total - index}
-          isAdmin={isAdmin}
-          onDelete={onDelete}
           hideProjectLabel={hideProjectLabel}
           projectIndexLabel={getProjectIndexLabel?.(post.id, index)}
           backToProjectId={backToProjectId}

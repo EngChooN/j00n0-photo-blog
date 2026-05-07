@@ -10,8 +10,6 @@ type Props = {
   post: Post;
   index: number;
   displayNumber: number;
-  isAdmin?: boolean;
-  onDelete?: (id: string) => void;
   hideProjectLabel?: boolean;
   projectIndexLabel?: string;
   backToProjectId?: string;
@@ -39,12 +37,63 @@ function formatDate(value: string) {
     .toUpperCase();
 }
 
+// Outline-only — LikeButton owns the filled variant on the detail sheet.
+function HeartIcon() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-3 w-3"
+    >
+      <path d="M12 21s-7-4.35-9.5-9C1.5 9 3 5 7 5c2 0 3.5 1 5 3 1.5-2 3-3 5-3 4 0 5.5 4 4.5 7-2.5 4.65-9.5 9-9.5 9z" />
+    </svg>
+  );
+}
+
+function SpeechBubbleIcon() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-3 w-3"
+    >
+      <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+    </svg>
+  );
+}
+
+function EyeIcon() {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-3 w-3"
+    >
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+      <circle cx="12" cy="12" r="3" />
+    </svg>
+  );
+}
+
 export function PhotoCard({
   post,
   index,
   displayNumber,
-  isAdmin,
-  onDelete,
   hideProjectLabel,
   projectIndexLabel,
   backToProjectId,
@@ -148,34 +197,24 @@ export function PhotoCard({
               </p>
             )}
           </div>
-          <div className="relative z-10 flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3">
             <span className="text-[10px] uppercase tracking-[0.3em] text-muted">
               {formatDate(post.takenAt || post.createdAt)}
             </span>
-            {isAdmin && (
-              <div className="flex items-center gap-3">
-                <Link
-                  href={`/admin/edit/${post.id}`}
-                  className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-[10px] uppercase tracking-[0.3em] text-muted underline-offset-4 hover:text-ink hover:underline md:min-h-0 md:min-w-0"
-                >
-                  Edit
-                </Link>
-                {onDelete && (
-                  <>
-                    <span aria-hidden className="text-[10px] text-muted/50">
-                      ·
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => onDelete(post.id)}
-                      className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-[10px] uppercase tracking-[0.3em] text-muted underline-offset-4 hover:text-ink hover:underline md:min-h-0 md:min-w-0"
-                    >
-                      Delete
-                    </button>
-                  </>
-                )}
-              </div>
-            )}
+            <div className="flex items-center gap-2 text-[10px] tracking-[0.3em] text-muted/60 tabular-nums">
+              <span className="inline-flex items-center gap-1">
+                <HeartIcon />
+                <span>{post.likeCount}</span>
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <SpeechBubbleIcon />
+                <span>{post.commentCount}</span>
+              </span>
+              <span className="inline-flex items-center gap-1">
+                <EyeIcon />
+                <span>{post.viewCount}</span>
+              </span>
+            </div>
           </div>
         </figcaption>
       </figure>

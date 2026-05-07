@@ -1,9 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { PageShell } from '@/components/templates/PageShell';
 import { Hairline } from '@/components/atoms/Hairline';
+import { OverflowMenu } from '@/components/atoms/OverflowMenu';
 import { PhotoGridPresenter } from '@/components/organisms/PhotoGrid/PhotoGridPresenter';
+import { useMe } from '@/hooks/queries/useMe';
+import { useDeleteProject } from '@/hooks/mutations/useDeleteProject';
 import { assetUrl } from '@/lib/api';
 import type { ProjectDetail } from '@/lib/types';
 
@@ -18,17 +22,57 @@ function formatPeriod(start: string | null, end: string | null) {
 }
 
 export function ProjectDetailView({ project }: Props) {
+  const router = useRouter();
+  const { data: me } = useMe();
+  const isOwner = me?.role === 'admin';
+  const deleteProject = useDeleteProject();
   const period = formatPeriod(project.startDate, project.endDate);
   const total = project.posts.length;
 
+  const handleDelete = () => {
+    if (
+      !window.confirm(
+        '이 프로젝트를 삭제할까요? 포함된 게시글은 삭제되지 않습니다.',
+      )
+    ) {
+      return;
+    }
+    deleteProject.mutate(project.id, {
+      onSuccess: () => {
+        // /projects is server-rendered — refresh forces it to re-fetch
+        // without the deleted entry.
+        router.push('/projects');
+        router.refresh();
+      },
+    });
+  };
+
   return (
     <PageShell>
-      <Link
-        href="/projects"
-        className="text-[11px] uppercase tracking-[0.25em] text-muted underline-offset-4 hover:text-ink hover:underline"
-      >
-        ← Projects
-      </Link>
+      <div className="flex items-center justify-between">
+        <Link
+          href="/projects"
+          className="text-[11px] uppercase tracking-[0.25em] text-muted underline-offset-4 hover:text-ink hover:underline"
+        >
+          ← Projects
+        </Link>
+        {isOwner && (
+          <OverflowMenu
+            variant="light"
+            items={[
+              {
+                label: 'Edit',
+                href: `/admin/projects/${project.id}/edit`,
+              },
+              {
+                label: 'Delete',
+                destructive: true,
+                onClick: handleDelete,
+              },
+            ]}
+          />
+        )}
+      </div>
 
       <header className="space-y-6 pt-6 md:space-y-8 md:pt-10">
         <div className="relative aspect-[21/9] w-full overflow-hidden bg-line/40">
@@ -84,8 +128,6 @@ export function ProjectDetailView({ project }: Props) {
       <PhotoGridPresenter
         posts={project.posts.map((p) => ({ ...p, project: null }))}
         isLoading={false}
-        isAdmin={false}
-        onDelete={() => undefined}
         hideProjectLabel
         getProjectIndexLabel={(_postId, index) =>
           `${String(index + 1).padStart(2, '0')} / ${String(total).padStart(2, '0')}`

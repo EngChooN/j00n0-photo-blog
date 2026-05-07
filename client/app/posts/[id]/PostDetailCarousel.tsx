@@ -8,7 +8,11 @@ import { LikeButton } from '@/components/atoms/LikeButton';
 import { CommentsButton } from '@/components/atoms/CommentsButton';
 import { ShareButton } from '@/components/atoms/ShareButton';
 import { ExifLines } from '@/components/atoms/ExifLines';
+import { OverflowMenu } from '@/components/atoms/OverflowMenu';
 import { CommentsSection } from '@/components/organisms/CommentsSection';
+import { useMe } from '@/hooks/queries/useMe';
+import { useDeletePost } from '@/hooks/mutations/useDeletePost';
+import { api } from '@/lib/api';
 import type { Post } from '@/lib/types';
 
 type Props = {
@@ -33,6 +37,9 @@ function formatDate(value: string) {
 export function PostDetailCarousel({ post }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: me } = useMe();
+  const isOwner = me?.role === 'admin';
+  const deletePost = useDeletePost();
   const fromProjectId = searchParams.get('fromProject');
   // Only honor ?fromProject=xxx if the post actually belongs to that project —
   // otherwise the URL is stale or tampered, fall back to plain Back.
@@ -83,6 +90,12 @@ export function PostDetailCarousel({ post }: Props) {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [router, height, backHref]);
+
+  // Fire-and-forget view tracking. Server dedups by IP hash, so StrictMode's
+  // double-fire in dev is absorbed without extra counts.
+  useEffect(() => {
+    api.post(`/posts/${post.id}/view`).catch(() => {});
+  }, [post.id]);
 
   const toggle = () =>
     setHeight((h) => (h > (PEEK_H + maxH) / 2 ? PEEK_H : maxH));
@@ -142,6 +155,19 @@ export function PostDetailCarousel({ post }: Props) {
     }, 320);
   };
 
+  const handleDelete = () => {
+    if (!window.confirm('이 게시글을 삭제할까요?')) return;
+    deletePost.mutate(post.id, {
+      onSuccess: () => {
+        // The destination (home, project detail) is server-rendered;
+        // React Query invalidation alone won't drop the deleted post from
+        // its server-fetched payload. router.refresh() forces a re-fetch.
+        router.push(backHref);
+        router.refresh();
+      },
+    });
+  };
+
   const handleShare = async () => {
     const url = window.location.href;
     const description = post.caption?.slice(0, 160) || undefined;
@@ -171,12 +197,27 @@ export function PostDetailCarousel({ post }: Props) {
         >
           {backLabel}
         </Link>
-        {total > 1 && (
-          <span className="text-[10px] uppercase tracking-[0.3em] text-white/40">
-            {String(index + 1).padStart(2, '0')} /{' '}
-            {String(total).padStart(2, '0')}
-          </span>
-        )}
+        <div className="flex items-center gap-3">
+          {total > 1 && (
+            <span className="text-[10px] uppercase tracking-[0.3em] text-white/40">
+              {String(index + 1).padStart(2, '0')} /{' '}
+              {String(total).padStart(2, '0')}
+            </span>
+          )}
+          {isOwner && (
+            <OverflowMenu
+              variant="dark"
+              items={[
+                { label: 'Edit', href: `/admin/edit/${post.id}` },
+                {
+                  label: 'Delete',
+                  destructive: true,
+                  onClick: handleDelete,
+                },
+              ]}
+            />
+          )}
+        </div>
       </header>
 
       <div className="relative z-0 flex min-h-0 flex-1 items-center justify-center overflow-hidden">
@@ -226,6 +267,25 @@ export function PostDetailCarousel({ post }: Props) {
             <div className="flex flex-wrap items-center gap-4 pt-1 text-[10px] uppercase tracking-[0.3em] text-white/40">
               <LikeButton postId={post.id} initialLikeCount={post.likeCount} />
               <CommentsButton postId={post.id} onClick={openComments} />
+              <span
+                aria-label={`Views (${post.viewCount})`}
+                className="inline-flex items-center gap-1.5 text-white/40"
+              >
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-3.5 w-3.5"
+                >
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+                <span className="tabular-nums">{post.viewCount}</span>
+              </span>
               <ShareButton label={shareLabel} onClick={handleShare} />
             </div>
             {post.caption && (
