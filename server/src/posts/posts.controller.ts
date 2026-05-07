@@ -16,14 +16,12 @@ import type { Request } from 'express';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { JwtAuthOptionalGuard } from '@/auth/guards/jwt-auth-optional.guard';
+import { isBlogOwner } from '@/lib/auth-helpers';
 import { getVisitorIpHash } from '@/lib/visitor-ip';
 import { PostsService } from './posts.service';
 import { CreatePostDto, UpdatePostDto } from './dto/post.dto';
 
 const MAX_FILES = 20;
-
-const isAdmin = (req: Request): boolean =>
-  (req.user as { role?: string } | undefined)?.role === 'admin';
 
 @Controller('posts')
 export class PostsController {
@@ -32,13 +30,13 @@ export class PostsController {
   @UseGuards(JwtAuthOptionalGuard)
   @Get()
   list(@Req() req: Request) {
-    return this.posts.list(isAdmin(req));
+    return this.posts.list(isBlogOwner(req));
   }
 
   @UseGuards(JwtAuthOptionalGuard)
   @Get(':id')
   getOne(@Param('id') id: string, @Req() req: Request) {
-    return this.posts.getOne(id, isAdmin(req));
+    return this.posts.getOne(id, isBlogOwner(req));
   }
 
   @UseGuards(JwtAuthGuard)
@@ -83,5 +81,11 @@ export class PostsController {
   @Get(':id/like')
   hasLiked(@Param('id') id: string, @Req() req: Request) {
     return this.posts.hasLiked(id, getVisitorIpHash(req));
+  }
+
+  @Post(':id/view')
+  @HttpCode(200)
+  recordView(@Param('id') id: string, @Req() req: Request) {
+    return this.posts.recordView(id, getVisitorIpHash(req));
   }
 }

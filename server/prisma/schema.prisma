@@ -16,11 +16,13 @@ model Post {
   takenAt   String       @default("")
   createdAt DateTime     @default(now())
   likeCount Int          @default(0)
+  viewCount Int          @default(0)
   projectId String?
   project   Project?     @relation(fields: [projectId], references: [id], onDelete: SetNull)
   photos    Photo[]
   comments  Comment[]
   likes     LikeRecord[]
+  views     ViewRecord[]
 
   @@index([createdAt])
   @@index([projectId])
@@ -61,6 +63,15 @@ model Comment {
 }
 
 model LikeRecord {
+  postId        String
+  visitorIpHash String
+  createdAt     DateTime @default(now())
+  post          Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([postId, visitorIpHash])
+}
+
+model ViewRecord {
   postId        String
   visitorIpHash String
   createdAt     DateTime @default(now())

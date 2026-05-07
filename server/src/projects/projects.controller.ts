@@ -15,11 +15,9 @@ import type { Request } from 'express';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '@/auth/guards/jwt-auth.guard';
 import { JwtAuthOptionalGuard } from '@/auth/guards/jwt-auth-optional.guard';
+import { isBlogOwner } from '@/lib/auth-helpers';
 import { ProjectsService } from './projects.service';
 import { CreateProjectDto, UpdateProjectDto } from './dto/project.dto';
-
-const isAdmin = (req: Request): boolean =>
-  (req.user as { role?: string } | undefined)?.role === 'admin';
 
 @Controller('projects')
 export class ProjectsController {
@@ -28,13 +26,13 @@ export class ProjectsController {
   @UseGuards(JwtAuthOptionalGuard)
   @Get()
   list(@Req() req: Request) {
-    return this.projects.list(isAdmin(req));
+    return this.projects.list(isBlogOwner(req));
   }
 
   @UseGuards(JwtAuthOptionalGuard)
   @Get(':id')
   getOne(@Param('id') id: string, @Req() req: Request) {
-    return this.projects.getOne(id, isAdmin(req));
+    return this.projects.getOne(id, isBlogOwner(req));
   }
 
   @UseGuards(JwtAuthGuard)

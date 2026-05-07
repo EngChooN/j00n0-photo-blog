@@ -37,27 +37,29 @@ export class PostsService {
     private readonly storage: StorageService,
   ) {}
 
-  async list(isAdmin: boolean) {
+  async list(isOwner: boolean) {
     const posts = await this.prisma.post.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
         photos: { orderBy: { position: 'asc' } },
         project: { select: { id: true, title: true, isPublic: true } },
+        _count: { select: { comments: true } },
       },
     });
-    return posts.map((p) => maskProject(p, isAdmin));
+    return posts.map((p) => transformPost(p, isOwner));
   }
 
-  async getOne(id: string, isAdmin: boolean) {
+  async getOne(id: string, isOwner: boolean) {
     const post = await this.prisma.post.findUnique({
       where: { id },
       include: {
         photos: { orderBy: { position: 'asc' } },
         project: { select: { id: true, title: true, isPublic: true } },
+        _count: { select: { comments: true } },
       },
     });
     if (!post) throw new NotFoundException('Post not found');
-    return maskProject(post, isAdmin);
+    return transformPost(post, isOwner);
   }
 
   async like(postId: string, visitorIpHash: string) {
@@ -137,6 +139,30 @@ export class PostsService {
     return { likeCount: post.likeCount, liked: !!record };
   }
 
+  // Race-safe via the (postId, visitorIpHash) PK: createMany+skipDuplicates
+  // compiles to ON CONFLICT DO NOTHING, so concurrent requests from the same
+  // visitor produce a single row and a single increment.
+  async recordView(postId: string, visitorIpHash: string) {
+    const post = await this.prisma.post.findUnique({
+      where: { id: postId },
+      select: { id: true, viewCount: true },
+    });
+    if (!post) throw new NotFoundException('Post not found');
+
+    const { count } = await this.prisma.viewRecord.createMany({
+      data: [{ postId, visitorIpHash }],
+      skipDuplicates: true,
+    });
+    if (count === 0) return { viewCount: post.viewCount };
+
+    const updated = await this.prisma.post.update({
+      where: { id: postId },
+      data: { viewCount: { increment: 1 } },
+      select: { viewCount: true },
+    });
+    return { viewCount: updated.viewCount };
+  }
+
   async create(files: Express.Multer.File[], dto: CreatePostDto) {
     if (!files || files.length === 0) {
       throw new BadRequestException('At least one photo is required');
@@ -179,9 +205,10 @@ export class PostsService {
         include: {
           photos: { orderBy: { position: 'asc' } },
           project: { select: { id: true, title: true, isPublic: true } },
+          _count: { select: { comments: true } },
         },
       });
-      return maskProject(created, true);
+      return transformPost(created, true);
     } catch (error) {
       await this.storage.remove(processed.map((p) => p.src));
       throw error;
@@ -267,6 +294,7 @@ export class PostsService {
           include: {
             photos: { orderBy: { position: 'asc' } },
             project: { select: { id: true, title: true, isPublic: true } },
+            _count: { select: { comments: true } },
           },
         });
       });
@@ -277,7 +305,7 @@ export class PostsService {
 
     // DB is the source of truth; clean up storage after commit succeeds.
     await this.storage.remove(removedPhotos.map((p) => p.src));
-    return maskProject(updated, true);
+    return transformPost(updated, true);
   }
 
   async remove(id: string) {
@@ -381,21 +409,27 @@ export class PostsService {
   }
 }
 
-type WithProject<T> = T & {
+type WithProjectAndCount<T> = T & {
   project: { id: string; title: string; isPublic: boolean } | null;
+  _count: { comments: number };
 };
 
-function maskProject<T>(post: WithProject<T>, isAdmin: boolean) {
-  const { project, ...rest } = post;
-  if (!project || (!isAdmin && !project.isPublic)) {
-    return { ...rest, project: null } as T & {
-      project: { id: string; title: string } | null;
-    };
-  }
+// Strips internal Prisma shapes from the response: hides private projects from
+// non-owners, and flattens `_count.comments` into the public `commentCount`.
+function transformPost<T>(post: WithProjectAndCount<T>, isOwner: boolean) {
+  const { project, _count, ...rest } = post;
+  const exposedProject =
+    !project || (!isOwner && !project.isPublic)
+      ? null
+      : { id: project.id, title: project.title };
   return {
     ...rest,
-    project: { id: project.id, title: project.title },
-  } as T & { project: { id: string; title: string } | null };
+    project: exposedProject,
+    commentCount: _count.comments,
+  } as T & {
+    project: { id: string; title: string } | null;
+    commentCount: number;
+  };
 }
 
 function formatExif(raw: Record<string, unknown> | null): ExifData | null {

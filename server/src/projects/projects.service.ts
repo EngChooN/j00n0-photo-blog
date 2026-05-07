@@ -19,9 +19,9 @@ export class ProjectsService {
     private readonly storage: StorageService,
   ) {}
 
-  list(isAdmin: boolean) {
+  list(isOwner: boolean) {
     return this.prisma.project.findMany({
-      where: isAdmin ? {} : { isPublic: true },
+      where: isOwner ? {} : { isPublic: true },
       // Postgres enum sorts by declared order. ProjectStatus is { ongoing, completed }
       // so 'asc' lands ongoing first.
       orderBy: [{ status: 'asc' }, { updatedAt: 'desc' }],
@@ -29,7 +29,7 @@ export class ProjectsService {
     });
   }
 
-  async getOne(id: string, isAdmin: boolean) {
+  async getOne(id: string, isOwner: boolean) {
     const project = await this.prisma.project.findUnique({
       where: { id },
       include: {
@@ -40,14 +40,22 @@ export class ProjectsService {
               where: { position: 0 },
               orderBy: { position: 'asc' },
             },
+            _count: { select: { comments: true } },
           },
         },
       },
     });
-    if (!project || (!project.isPublic && !isAdmin)) {
+    if (!project || (!project.isPublic && !isOwner)) {
       throw new NotFoundException('Project not found');
     }
-    return project;
+    const { posts, ...rest } = project;
+    return {
+      ...rest,
+      posts: posts.map(({ _count, ...p }) => ({
+        ...p,
+        commentCount: _count.comments,
+      })),
+    };
   }
 
   async create(file: Express.Multer.File | undefined, dto: CreateProjectDto) {

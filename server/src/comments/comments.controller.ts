@@ -10,6 +10,7 @@ import {
 } from '@nestjs/common';
 import type { Request } from 'express';
 import { JwtAuthOptionalGuard } from '@/auth/guards/jwt-auth-optional.guard';
+import { isBlogOwner } from '@/lib/auth-helpers';
 import { getVisitorIpHash } from '@/lib/visitor-ip';
 import { CommentsService } from './comments.service';
 import { CreateCommentDto } from './dto/create-comment.dto';
@@ -35,8 +36,9 @@ export class CommentsController {
   @UseGuards(JwtAuthOptionalGuard)
   @Delete('comments/:id')
   remove(@Param('id') id: string, @Req() req: Request) {
-    const user = req.user as { role?: string } | undefined;
-    const isAdmin = user?.role === 'admin';
-    return this.comments.remove(id, isAdmin ? null : getVisitorIpHash(req));
+    return this.comments.remove(
+      id,
+      isBlogOwner(req) ? null : getVisitorIpHash(req),
+    );
   }
 }
